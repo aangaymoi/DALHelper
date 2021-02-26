@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DALHelper v2.0")]
-[assembly: AssemblyDescription("DALHelper v2.0")]
+[assembly: AssemblyTitle("DALHelper")]
+[assembly: AssemblyDescription("Simple Integration with MSSQL, Oracle, Access")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("DALHelper v2.0")]
-[assembly: AssemblyProduct("DALHelper v2.0")]
-[assembly: AssemblyCopyright("Copyright © DALHelper 2010")]
+[assembly: AssemblyCompany("Hoang TT. Phuong")]
+[assembly: AssemblyProduct("DALHelper")]
+[assembly: AssemblyCopyright("Hoang TT. Phuong")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
