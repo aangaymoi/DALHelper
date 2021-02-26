@@ -1,0 +1,9 @@
+<project outputDir=".\EXE\Confused" baseDir=".\EXE" xmlns="http://confuser.codeplex.com">  
+  <module path="DAL4.0.dll">
+    <rule preset="none" pattern="true">                
+        <protection id="anti ildasm" />
+        <protection id="anti tamper" />        
+		<protection id="constants" />
+    </rule>
+  </module>
+</project>

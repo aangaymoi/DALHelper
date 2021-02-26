@@ -8,7 +8,7 @@ using System.Reflection;
 /*[assembly: Obfuscation(Exclude = false, Feature = "strong name key:Helpers.pfx")]*/
 /*[assembly: Obfuscation(Exclude = false, Feature = "strong name key password:f0a3cb75b4e57dcc3835d79ab1886888")]*/
 /*+rename(mode=letters,flatten=false);*/
-[assembly: Obfuscation(Exclude = false, Feature = "preset(maximum);+anti ildasm;+anti tamper;-constants;-ctrl flow;+anti debug;+invalid metadata;-ref proxy;-resources;+rename(mode=letters,flatten=false);")]
+// [assembly: Obfuscation(Exclude = false, Feature = "preset(maximum);+anti ildasm;+anti tamper;-constants;-ctrl flow;+anti debug;+invalid metadata;-ref proxy;-resources;+rename(mode=letters,flatten=false);")]
 namespace Helpers
 {
     public static class DataHelper
@@ -172,6 +172,11 @@ namespace Helpers
                 return new DateTime();
 
             return record.GetDateTime(idx);
+        }
+
+        public static DateTime? ToDateTimeObject(this IDataRecord record, int idx)
+        {
+            return record[idx] as DateTime?;
         }
 
         /// <summary>

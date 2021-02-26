@@ -6,14 +6,14 @@ using System.Data.Common;
 using System.Data;
 using System.Reflection;
 
-[assembly: Obfuscation(Exclude = false, Feature = "preset(maximum);+anti ildasm;+anti tamper;-constants;-ctrl flow;+anti debug;+invalid metadata;-ref proxy;-resources;+rename(mode=letters,flatten=false);")]
+// [assembly: Obfuscation(Exclude = false, Feature = "preset(maximum);+anti ildasm;+anti tamper;-constants;-ctrl flow;-anti debug;+invalid metadata;-ref proxy;-resources;-rename(mode=letters,flatten=false);")]
 namespace DataAccessLayer
 {
     /// <summary> 
     /// Data access layer
     ///     One output parameter is supported, and the output parameter must be the last parameter, and everything be auto    
     /// </summary>
-    public static class Base
+    public class DB : IDisposable
     {
         // Access 2010, 2007
         // ConnectionString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=.\DBNorthwind\Northwind.accdb;";
@@ -28,17 +28,16 @@ namespace DataAccessLayer
         // "System.Data.OleDb";
         // System.Data.SqlClient
         
-        private static DbProviderFactory _provider = null;
-        private static String _connectionString = String.Empty;     // backup connection string
-        private static String _providerName = String.Empty;         // backup provider name
-        private static int _commandTimeout = 30;
+        private DbProviderFactory _provider = null;
+        private String _connectionString = String.Empty;     // backup connection string
+        private int _commandTimeout = 30;
 
         /// <summary> 
-        /// CreateDataAdapter
+        /// createDataAdapter
         /// </summary>
         /// <param name="command">DbCommand</param>
         /// <returns>DbDataAdapter</returns>
-        private static DbDataAdapter CreateDataAdapter(this DbCommand command)
+        private DbDataAdapter createDataAdapter(DbCommand command)
         {
             DbDataAdapter adapter = _provider.CreateDataAdapter();
             adapter.SelectCommand = command;
@@ -47,12 +46,12 @@ namespace DataAccessLayer
         }
 
         /// <summary>
-        /// AddParams
+        /// addParams
         /// </summary>
         /// <param name="command">DbCommand</param>
         /// <param name="paramObj">object[]</param>
         /// <returns>void</returns>
-        private static void AddParams(this DbCommand command, object[] paramObj)
+        private void addParams(DbCommand command, object[] paramObj)
         {
             if (paramObj == null)
                 return;
@@ -62,54 +61,33 @@ namespace DataAccessLayer
             for (int idx = 0; idx < paramObj.Length; idx++)
             {
                 DbParameter param = _provider.CreateParameter();
+
                 param.ParameterName = String.Format("@A{0:d2}", idx);
                 param.Value = paramObj[idx];
                                 
                 command.Parameters.Add(param);
             }
-        }        
-
-        /// <summary>
-        /// CreateComm4nd
-        /// </summary>
-        /// <param name="conn">DbConnection</param>        
-        /// <returns>DbCommand</returns>
-        private static DbCommand CreateComm4nd(this DbConnection conn)
-        {
-            DbCommand command = _provider.CreateCommand();            
-            command.Connection = conn;
-            command.CommandTimeout = _commandTimeout;
-            command.Connection.ConnectionString = _connectionString;
-
-            command.Connection.Open();
-
-            return command;
         }
 
         /// <summary>
-        /// CreateComm4nd
-        /// </summary>
-        /// <param name="conn">DbConnection</param>
-        /// <param name="transaction">DbTransaction</param>
-        /// <returns>DbCommand</returns>
-        private static DbCommand CreateComm4nd(this DbConnection conn, DbTransaction transaction)
-        {
-            DbCommand command = conn.CreateComm4nd();
-            command.Transaction = transaction;
-            return command;
-        }
-
-        /// <summary>
-        /// Create command with query
+        /// createComm4nd
         /// </summary>
         /// <param name="conn">DbConnection</param>
         /// <param name="query">string</param>
         /// <returns>DbCommand</returns>
-        private static DbCommand CreateComm4nd(this DbConnection conn, string query, object[] paramObj)
+        private DbCommand createComm4nd(DbConnection conn, string query, object[] paramObj)
         {
-            DbCommand command = conn.CreateComm4nd();
+            DbCommand command = _provider.CreateCommand();
+            command.Connection = conn;
+
+            command.CommandTimeout = _commandTimeout;
+            command.Connection.ConnectionString = _connectionString;
+
             command.CommandText = query;
-            command.AddParams(paramObj);
+
+            this.addParams(command, paramObj);
+
+            command.Connection.Open();
             return command;
         }
 
@@ -119,17 +97,13 @@ namespace DataAccessLayer
         /// <param name="providerName">string</param>
         /// <param name="connectionString">string</param>                
         /// <returns>void</returns>
-        public static void CreateInstance(this string providerName, string connectionString, int commandTimeout)
+        public DB(string providerName, string connectionString, int commandTimeout)
         {
-            if (_provider != null)
-                return;
-
             _commandTimeout = commandTimeout;
-            _providerName = providerName;
             _connectionString = connectionString;
 
             // create provider
-            _provider = DbProviderFactories.GetFactory(_providerName);
+            _provider = DbProviderFactories.GetFactory(providerName);
         }
 
         /// <summary>
@@ -138,20 +112,14 @@ namespace DataAccessLayer
         /// <param name="connectionString">string</param>
         /// <param name="commandTimeout">int</param>
         /// <returns></returns>
-        public static void CreateInstance(this string connectionString, int commandTimeout)
-        {
-            "System.Data.OleDb".CreateInstance(connectionString, commandTimeout);
-        }
+        public DB(string connectionString, int commandTimeout) : this("System.Data.OleDb", connectionString, commandTimeout) {}
 
         /// <summary>
         /// public static void CreateInstance(this string connectionString)
         /// </summary>
         /// <param name="connectionString">string</param>
         /// <returns></returns>
-        public static void CreateInstance(this string connectionString)
-        {
-            connectionString.CreateInstance(120);
-        }
+        public DB(string connectionString) : this(connectionString, 120) { }
 
         /// <summary>
         /// GetValue
@@ -159,10 +127,10 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object[]</param>
         /// <returns>object</returns>
-        public static object GetValue(this string query, object[] paramObj)
+        public object GetValue(string query, object[] paramObj)
         {
             object paramOut = new Guid();
-            return query.GetValue(paramObj, ref paramOut);
+            return GetValue(query, paramObj, ref paramOut);
         }
 
         /// <summary>
@@ -175,13 +143,13 @@ namespace DataAccessLayer
         /// <param name="paramObj"></param>
         /// <param name="paramOut"></param>
         /// <returns></returns>
-        public static object GetValue(this string query, object[] paramObj, ref object paramOut)
+        public object GetValue(string query, object[] paramObj, ref object paramOut)
         {
             object value = null;
 
             using (DbConnection conn = _provider.CreateConnection())
             {
-                using (DbCommand command = conn.CreateComm4nd(query, paramObj))
+                using (DbCommand command = this.createComm4nd(conn, query, paramObj))
                 {
                     bool isOutput = !(paramOut is Guid);
                     if (isOutput) command.Parameters[command.Parameters.Count - 1].Direction = ParameterDirection.Output;
@@ -201,10 +169,10 @@ namespace DataAccessLayer
         /// <param name="query"></param>
         /// <param name="paramObj"></param>
         /// <returns></returns>
-        public static T GetData<T>(this string query, object[] paramObj) where T : class, new()
+        public T GetData<T>(string query, object[] paramObj) where T : class, new()
         {
             object paramOut = new Guid();
-            return query.GetData<T>(paramObj, ref paramOut);
+            return this.GetData<T>(query, paramObj, ref paramOut);
         }
 
         /// <summary>
@@ -214,18 +182,18 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object</param>
         /// <returns>DataSet or DataTable</returns>
-        public static T GetData<T>(this string query, object[] paramObj, ref object paramOut) where T : class, new()
+        public T GetData<T>(string query, object[] paramObj, ref object paramOut) where T : class, new()
         {
             T dat = new T();
 
             using (DbConnection conn = _provider.CreateConnection())
             {
-                using (DbCommand command = conn.CreateComm4nd(query, paramObj))
+                using (DbCommand command = this.createComm4nd(conn, query, paramObj))
                 {
                     bool isOutput = !(paramOut is Guid);
                     if (isOutput) command.Parameters[command.Parameters.Count - 1].Direction = ParameterDirection.Output;
 
-                    using (DbDataAdapter adapter = command.CreateDataAdapter())
+                    using (DbDataAdapter adapter = this.createDataAdapter(command))
                     {
                         if (dat is DataTable)
                             adapter.Fill(dat as DataTable);
@@ -254,10 +222,10 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object[]</param>
         /// <returns>List<T></returns>
-        public static List<T> GetObjects<T>(this string query, object[] paramObj)
+        public List<T> GetObjects<T>(string query, object[] paramObj)
             where T : class, new()
         {
-            return query.GetObjects<T>(paramObj, new Mapper<T>());
+            return this.GetObjects<T>(query, paramObj, new Mapper<T>());
         }        
 
         /// <summary>
@@ -268,10 +236,10 @@ namespace DataAccessLayer
         /// <param name="paramObj"></param>
         /// <param name="paramOut"></param>
         /// <returns></returns>
-        public static List<T> GetObjects<T>(this string query, object[] paramObj, ref object paramOut)
+        public List<T> GetObjects<T>(string query, object[] paramObj, ref object paramOut)
             where T : class, new()
         {
-            return query.GetObjects<T>(paramObj, ref paramOut, new Mapper<T>());
+            return this.GetObjects<T>(query, paramObj, ref paramOut, new Mapper<T>());
         }
 
         /// <summary>
@@ -282,11 +250,11 @@ namespace DataAccessLayer
         /// <param name="paramObj">object[]</param>
         /// <param name="map">Mapper<T></param>
         /// <returns>List<T></returns>
-        public static List<T> GetObjects<T>(this string query, object[] paramObj, Mapper<T> map)
+        public List<T> GetObjects<T>(string query, object[] paramObj, Mapper<T> map)
             where T : class, new()
         {
             object paramOut = new Guid();
-            return query.GetObjects<T>(paramObj, ref paramOut, map);
+            return this.GetObjects<T>(query, paramObj, ref paramOut, map);
         }
 
         /// <summary>
@@ -305,12 +273,12 @@ namespace DataAccessLayer
         /// <param name="paramOut">ref object</param>
         /// <param name="map">Mapper<T></param>
         /// <returns>List<T></returns>
-        public static List<T> GetObjects<T>(this string query, object[] paramObj, ref object paramOut, Mapper<T> map)
+        public List<T> GetObjects<T>(string query, object[] paramObj, ref object paramOut, Mapper<T> map)
             where T : class, new()
         {
             using (DbConnection conn = _provider.CreateConnection())
             {
-                using (DbCommand command = conn.CreateComm4nd(query, paramObj))
+                using (DbCommand command = this.createComm4nd(conn, query, paramObj))
                 {
                     bool isOutput = !(paramOut is Guid);
                     if (isOutput) command.Parameters[command.Parameters.Count - 1].Direction = ParameterDirection.Output;
@@ -330,10 +298,10 @@ namespace DataAccessLayer
         /// <param name="query"></param>
         /// <param name="paramObj"></param>
         /// <returns></returns>
-        public static T GetObject<T>(this string query, object[] paramObj)
+        public T GetObject<T>(string query, object[] paramObj)
             where T : class, new()
         {
-            return query.GetObject<T>(paramObj, new Mapper<T>());
+            return this.GetObject<T>(query, paramObj, new Mapper<T>());
         }
 
         /// <summary>
@@ -344,11 +312,11 @@ namespace DataAccessLayer
         /// <param name="paramObj"></param>
         /// <param name="map"></param>
         /// <returns></returns>
-        public static T GetObject<T>(this string query, object[] paramObj, Mapper<T> map)
+        public T GetObject<T>(string query, object[] paramObj, Mapper<T> map)
             where T : class, new()
         {
             object paramOut = new Guid();
-            return query.GetObject<T>(paramObj, ref paramOut, map);
+            return this.GetObject<T>(query, paramObj, ref paramOut, map);
         }
 
         /// <summary>
@@ -358,10 +326,10 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object[]</param>
         /// <returns>T</returns>
-        public static T GetObject<T>(this string query, object[] paramObj, ref object paramOut)
+        public T GetObject<T>(string query, object[] paramObj, ref object paramOut)
             where T : class, new()
         {
-            return query.GetObject<T>(paramObj, ref paramOut, new Mapper<T>());
+            return this.GetObject<T>(query, paramObj, ref paramOut, new Mapper<T>());
         }
 
         /// <summary>
@@ -372,12 +340,12 @@ namespace DataAccessLayer
         /// <param name="paramObj">object[]</param>
         /// <param name="map">Mapper<T></param>
         /// <returns>T</returns>
-        public static T GetObject<T>(this string query, object[] paramObj, ref object paramOut, Mapper<T> map)
+        public T GetObject<T>(string query, object[] paramObj, ref object paramOut, Mapper<T> map)
             where T : class, new()
         {
             using (DbConnection conn = _provider.CreateConnection())
             {
-                using (DbCommand command = conn.CreateComm4nd(query, paramObj))
+                using (DbCommand command = this.createComm4nd(conn, query, paramObj))
                 {
                     bool isOutput = !(paramOut is Guid);
                     if (isOutput) command.Parameters[command.Parameters.Count - 1].Direction = ParameterDirection.Output;
@@ -400,10 +368,10 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object[]</param>
         /// <returns>int</returns>
-        public static int Execute(this string query, object[] paramObj)
+        public int Execute(string query, object[] paramObj)
         {
             object paramOut = new Guid();
-            return query.Execute(paramObj, ref paramOut);
+            return this.Execute(query, paramObj, ref paramOut);
         }
 
         /// <summary>
@@ -416,11 +384,11 @@ namespace DataAccessLayer
         /// <param name="query">string</param>
         /// <param name="paramObj">object[]</param>
         /// <param name="paramOut">object</param>
-        public static int Execute(this string query, object[] paramObj, ref object paramOut)
+        public int Execute(string query, object[] paramObj, ref object paramOut)
         {
             using (DbConnection conn = _provider.CreateConnection())
             {
-                using (DbCommand command = conn.CreateComm4nd(query, paramObj))
+                using (DbCommand command = this.createComm4nd(conn, query, paramObj))
                 {
                     bool isOutput = !(paramOut is Guid);
                     if (isOutput) command.Parameters[command.Parameters.Count - 1].Direction = ParameterDirection.Output;
@@ -433,11 +401,36 @@ namespace DataAccessLayer
             }
         }
 
-        /// <summary>
-        /// Dispose
-        /// </summary>
-        public static void Dispose()
-        {            
+        private bool _disposed = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                _disposed = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        ~DB()
+        {
+            Dispose(false);
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
