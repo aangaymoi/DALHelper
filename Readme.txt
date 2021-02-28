@@ -1,6 +1,6 @@
-﻿
 
-               <DAL> - What's new in the latest version
+
+               <DALHelper> - What's new in the latest version
 
 
      Version <2.0>
@@ -33,6 +33,21 @@
         string query = "sp_GETaaa ?, ?, ?, ?, ?, ? OUTPUT";
         var res = query.GetObjects<AAA>(new object[] { id, q, offset, pageSize, orderBy, 0 }, ref total, new AAAMapper());
 
+     3. How to create CustomerMapper
+        public class CustomerMapper : Mapper<Customer>
+        {
+            public override Customer Map(IDataRecord record)
+            {
+                var cus = new Customer();
+                var idx = -1;
+                
+                cus.ID = record[++idx].ToString();
+                cus.Name = record[++idx].ToString();        
+                
+                return cus;
+            }
+        }
+	 
 
 		
 		
