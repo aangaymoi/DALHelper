@@ -1,7 +1,9 @@
 
 
                <DALHelper> - What's new in the latest version
-
+			   
+     We are no more support this version, and we recommend using Install-Package PH.DALHelper -Version 1.1.0
+     We have already supported .NET Core.
 
      Version <2.0>
      This is handle query, excute from MSSQL, Oracle, Access just simple in one Library.
